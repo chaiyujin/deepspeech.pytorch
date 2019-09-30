@@ -104,3 +104,5 @@ ENV/
 models/
 data/*.csv
 data/*_dataset/
+*.pth
+*.tmp
