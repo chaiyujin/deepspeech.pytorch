@@ -120,6 +120,7 @@ class SpectrogramParser(AudioParser):
         spect = np.log1p(spect)
         spect = torch.FloatTensor(spect)
         if self.normalize:
+            raise NotImplementedError("Should not use normalization!!!!")
             mean = spect.mean()
             std = spect.std()
             spect.add_(-mean)

@@ -17,6 +17,8 @@ from logger import VisdomLogger, TensorBoardLogger
 from model import DeepSpeech, supported_rnns
 from test import evaluate
 from utils import convert_model_to_half, reduce_tensor, check_loss
+from saber_visualizer import plot as saber_plot
+from saber_visualizer import plot_item as saber_item
 
 parser = argparse.ArgumentParser(description='DeepSpeech training')
 parser.add_argument('--train-manifest', metavar='DIR',
@@ -27,8 +29,9 @@ parser.add_argument('--sample-rate', default=16000, type=int, help='Sample rate'
 parser.add_argument('--batch-size', default=20, type=int, help='Batch size for training')
 parser.add_argument('--num-workers', default=4, type=int, help='Number of workers used in data-loading')
 parser.add_argument('--labels-path', default='labels.json', help='Contains all characters for transcription')
-parser.add_argument('--window-size', default=.02, type=float, help='Window size for spectrogram in seconds')
-parser.add_argument('--window-stride', default=.01, type=float, help='Window stride for spectrogram in seconds')
+parser.add_argument('--normalize', dest='normalize', action='store_true', help='Normalize spectrogram')
+parser.add_argument('--window-size', default=.064, type=float, help='Window size for spectrogram in seconds')
+parser.add_argument('--window-stride', default=.008, type=float, help='Window stride for spectrogram in seconds')
 parser.add_argument('--window', default='hamming', help='Window type for spectrogram generation')
 parser.add_argument('--hidden-size', default=800, type=int, help='Hidden size of RNNs')
 parser.add_argument('--hidden-layers', default=5, type=int, help='Number of RNN layers')
@@ -116,6 +119,17 @@ class AverageMeter(object):
 if __name__ == '__main__':
     args = parser.parse_args()
 
+    assert not args.mixed_precision
+    assert not args.normalize
+    assert not args.visdom
+    assert args.tensorboard
+    assert args.cuda
+
+    win_size = int(args.sample_rate * args.window_size)
+    hop_size = int(args.sample_rate * args.window_stride)
+    assert win_size == 1024
+    assert hop_size == 128
+
     # Set seeds for determinism
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
@@ -193,9 +207,9 @@ if __name__ == '__main__':
 
     decoder = GreedyDecoder(labels)
     train_dataset = SpectrogramDataset(audio_conf=audio_conf, manifest_filepath=args.train_manifest, labels=labels,
-                                       normalize=True, augment=args.augment)
+                                       normalize=args.normalize, augment=args.augment)
     test_dataset = SpectrogramDataset(audio_conf=audio_conf, manifest_filepath=args.val_manifest, labels=labels,
-                                      normalize=True, augment=False)
+                                      normalize=args.normalize, augment=False)
     if not args.distributed:
         train_sampler = BucketingSampler(train_dataset, batch_size=args.batch_size)
     else:
@@ -232,6 +246,7 @@ if __name__ == '__main__':
     data_time = AverageMeter()
     losses = AverageMeter()
 
+    plot_step = 0
     for epoch in range(start_epoch, args.epochs):
         model.train()
         end = time.time()
@@ -247,6 +262,21 @@ if __name__ == '__main__':
 
             out, output_sizes = model(inputs, input_sizes)
             out = out.transpose(0, 1)  # TxNxH
+
+            # plot input and output
+            if plot_step % 100 == 0:
+                # get sample
+                data_inp = inputs[0]
+                data_out = out[:, 0]
+                assert data_inp.shape[0] == 1
+                assert int(np.ceil(data_inp.shape[2]/2)) == data_out.shape[0]
+                data_out = torch.nn.functional.softmax(data_out, dim=-1)
+                data_out = torch.argmax(data_out, dim=-1)
+                tokens = [labels[y] for x in data_out for y in (int(x),)*2]
+                tokens = tokens[:data_inp.shape[-1]]
+                img = saber_plot(saber_item(inputs[0, 0], "inputs&preds", index_labels=tokens))
+                tensorboard_logger.tensorboard_writer.add_image("data0", img, plot_step, dataformats="HWC")
+            plot_step += 1
 
             float_out = out.float()  # ensure float32 for loss
             loss = criterion(float_out, targets, output_sizes, target_sizes).to(device)

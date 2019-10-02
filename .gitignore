@@ -106,3 +106,4 @@ data/*.csv
 data/*_dataset/
 *.pth
 *.tmp
+visualize/
