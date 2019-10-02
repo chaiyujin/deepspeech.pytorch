@@ -124,6 +124,7 @@ if __name__ == '__main__':
     assert not args.normalize
     assert not args.visdom
     assert args.tensorboard
+    assert args.augment
     assert args.cuda
 
     win_size = int(args.sample_rate * args.window_size)
@@ -274,13 +275,10 @@ if __name__ == '__main__':
                 real_str = "".join([labels[int(x)] for x in targets[:target_sizes[0]]])
                 real_str = "\n".join(textwrap.wrap(real_str, 120))
                 data_out = torch.nn.functional.softmax(data_out, dim=-1)
-                data_out = torch.argmax(data_out, dim=-1)
-                tokens = [labels[y] for x in data_out for y in (int(x),)*2]
+                tokens = torch.argmax(data_out, dim=-1)
+                tokens = [labels[y] for x in tokens for y in (int(x),)*2]
                 tokens = tokens[:data_inp.shape[-1]]
-                pred_str = ""
-                for c in tokens:
-                    if len(pred_str) == 0 or c != pred_str[-1]:
-                        pred_str += c
+                pred_str = decoder.decode(data_out.unsqueeze(0), output_sizes[0:1])[0][0][0]
                 plot_title = "true: \"{}\"\npred: \"{}\"\n".format(real_str, pred_str)
                 img = saber_plot(saber_item(inputs[0, 0], plot_title, index_labels=tokens), aspect=5.0)
                 tensorboard_logger.tensorboard_writer.add_image("data0", img, plot_step, dataformats="HWC")
