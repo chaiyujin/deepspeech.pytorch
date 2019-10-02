@@ -277,7 +277,12 @@ if __name__ == '__main__':
                 data_out = torch.argmax(data_out, dim=-1)
                 tokens = [labels[y] for x in data_out for y in (int(x),)*2]
                 tokens = tokens[:data_inp.shape[-1]]
-                img = saber_plot(saber_item(inputs[0, 0], real_str, index_labels=tokens), aspect=5.0)
+                pred_str = ""
+                for c in tokens:
+                    if len(pred_str) == 0 or c != pred_str[-1]:
+                        pred_str += c
+                plot_title = "true: \"{}\"\npred: \"{}\"\n".format(real_str, pred_str)
+                img = saber_plot(saber_item(inputs[0, 0], plot_title, index_labels=tokens), aspect=5.0)
                 tensorboard_logger.tensorboard_writer.add_image("data0", img, plot_step, dataformats="HWC")
             plot_step += 1
 
