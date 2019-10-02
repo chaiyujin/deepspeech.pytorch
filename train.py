@@ -265,7 +265,7 @@ if __name__ == '__main__':
             out = out.transpose(0, 1)  # TxNxH
 
             # plot input and output
-            if plot_step % 100 == 0:
+            if plot_step % 500 == 0:
                 # get sample
                 data_inp = inputs[0]
                 data_out = out[:, 0]

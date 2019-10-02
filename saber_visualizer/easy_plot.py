@@ -5,7 +5,7 @@ import math
 import torch
 import numpy as np
 import matplotlib
-matplotlib.rcParams.update({'font.size': 10})
+matplotlib.rcParams.update({'font.size': 8})
 matplotlib.use("Agg")
 
 DEFAULT_CMAP = "viridis"
@@ -326,7 +326,7 @@ def __allocate_figure(num_rows, num_cols, x_length, y_length, scaling, aspect):
     else:
         assert isinstance(aspect, (float, int))
         img_w = img_h * aspect
-    mar_h, mar_w = 0.3, 0.5
+    mar_h, mar_w = 0.8, 0.8
     gap_h, gap_w = 0.5, 0.8
     gap_b = 0.1
     bar_w = 0.1
