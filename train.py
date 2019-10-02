@@ -4,6 +4,7 @@ import os
 import random
 import time
 
+import textwrap
 import numpy as np
 import torch.distributed as dist
 import torch.utils.data.distributed
@@ -270,11 +271,13 @@ if __name__ == '__main__':
                 data_out = out[:, 0]
                 assert data_inp.shape[0] == 1
                 assert int(np.ceil(data_inp.shape[2]/2)) == data_out.shape[0]
+                real_str = "".join([labels[int(x)] for x in targets[:target_sizes[0]]])
+                real_str = "\n".join(textwrap.wrap(real_str, 120))
                 data_out = torch.nn.functional.softmax(data_out, dim=-1)
                 data_out = torch.argmax(data_out, dim=-1)
                 tokens = [labels[y] for x in data_out for y in (int(x),)*2]
                 tokens = tokens[:data_inp.shape[-1]]
-                img = saber_plot(saber_item(inputs[0, 0], "inputs&preds", index_labels=tokens))
+                img = saber_plot(saber_item(inputs[0, 0], real_str, index_labels=tokens), aspect=5.0)
                 tensorboard_logger.tensorboard_writer.add_image("data0", img, plot_step, dataformats="HWC")
             plot_step += 1
 
