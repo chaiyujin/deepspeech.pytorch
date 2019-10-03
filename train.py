@@ -124,6 +124,7 @@ if __name__ == '__main__':
     assert not args.normalize
     assert not args.visdom
     assert args.tensorboard
+    assert args.checkpoint
     assert args.augment
     assert args.cuda
 
